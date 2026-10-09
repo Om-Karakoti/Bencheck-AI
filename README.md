@@ -69,8 +69,8 @@ When risk scores spike, black-box predictions aren't enough. Bencheck uses Kerne
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/bencheck.git
-cd bencheck
+git clone https://github.com/Om-Karakoti/Bencheck-AI.git
+cd Bencheck-AI
 
 # 2. Set up virtual environment
 python -m venv venv
