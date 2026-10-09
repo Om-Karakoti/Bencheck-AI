@@ -1,9 +1,11 @@
 # Bencheck
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://bencheck-ai-kp5wcppwygkgfk72eryscq.streamlit.app/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.30+-FF4B4B.svg)](https://streamlit.io/)
 [![Tests Passing](https://img.shields.io/badge/tests-52%20passed-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> **Live Deployment**: Access the live interactive SOC console at **[bencheck-ai.streamlit.app](https://bencheck-ai-kp5wcppwygkgfk72eryscq.streamlit.app/)**
 
 Most security dashboards tell you what already happened: an alert fired, a port was probed, or malware touched disk. By the time a ticket lands in the queue, the intruder has already pivoted.
 
@@ -86,13 +88,14 @@ pip install -r requirements.txt
 
 ### Running the App
 
-Start the tactical SOC dashboard:
+You can either use the live cloud instance directly or launch it locally:
 
-```bash
-streamlit run app.py
-```
-
-Your browser will automatically open at `http://localhost:8501`. 
+- **Live Cloud Deployment**: [https://bencheck-ai-kp5wcppwygkgfk72eryscq.streamlit.app/](https://bencheck-ai-kp5wcppwygkgfk72eryscq.streamlit.app/)
+- **Local Streamlit Dashboard**:
+  ```bash
+  streamlit run app.py
+  ```
+  Your browser will automatically open at `http://localhost:8501`.
 
 If you prefer running the lightweight Flask backend with the alternate static interface:
 
