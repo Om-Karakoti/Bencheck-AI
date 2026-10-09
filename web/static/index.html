@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bencheck - Cyber Threat World Model SOC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="scan-line"></div>
+
+  <!-- Top Header Navigation -->
+  <header class="soc-header">
+    <div class="logo-group">
+      <div class="radar-icon"></div>
+      <div class="logo-text">
+        <h1>
+          BENCHECK // CYBER WORLD MODEL
+          <span class="badge">Threat Forecasting SOC</span>
+        </h1>
+        <p>Autoregressive Threat Prediction & Infiltration Surveillance</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="status-indicator" id="sys-status-badge">
+        <span class="status-dot"></span>
+        <span>Live Engine: Online</span>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btn-download-template">
+        Download Sample CSV
+      </button>
+    </div>
+  </header>
+
+  <!-- Global Alert Toast -->
+  <div id="global-alert" class="alert-banner alert-success" style="display: none; margin: 1rem 2rem 0 2rem;"></div>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container" style="max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem;">
+
+    <!-- =========================================================================
+         SECTION 1: DATASET INPUT (SIMPLIFIED BUTTONS)
+         ========================================================================= -->
+    <section class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">
+            Enter Network Telemetry Dataset
+          </h2>
+          <p style="font-size: 0.825rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+            Provide network traffic data to classify threat types, calculate percentages, and forecast attack progression.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--cyan); font-weight: 700;">
+            Quick Samples:
+          </span>
+          <button class="scenario-btn active" data-scenario="kill_chain" id="scen-killchain">
+            Test Attack Sample
+          </button>
+          <button class="scenario-btn" data-scenario="benign" id="scen-benign">
+            Test Normal Sample
+          </button>
+          <button class="scenario-btn" data-scenario="exfil" id="scen-exfil">
+            Test Exfil Sample
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Drag & Drop Zone -->
+        <div class="upload-dropzone" id="drop-zone">
+          <input type="file" id="file-input" accept=".csv" style="display: none;">
+          <div class="dropzone-icon">UPLOAD</div>
+          <div class="dropzone-text">
+            <strong>Drag & drop CSV file here</strong>, or <span class="browse-link">browse computer</span>
+          </div>
+          <div class="dropzone-sub">
+            Accepts standard NetFlow / SOC CSV telemetry
+          </div>
+        </div>
+
+        <!-- Active Dataset Info Pill -->
+        <div id="dataset-info-box" class="dataset-info-bar">
+          <div class="info-item">
+            <span class="info-label">Active Data:</span>
+            <span class="info-val" id="ds-name">Multi-Stage Attack Sample</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Total Flows:</span>
+            <span class="info-val" id="ds-flows">4,367</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Sessions:</span>
+            <span class="info-val" id="ds-sessions">3 sessions</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Duration:</span>
+            <span class="info-val" id="ds-duration">270.0s</span>
+          </div>
+          <div class="info-item" style="margin-left: auto;">
+            <span class="status-pill status-ready" id="ds-status-pill">Ready to Analyze</span>
+          </div>
+        </div>
+
+        <!-- Simplified Action Button -->
+        <div style="display: flex; justify-content: center; margin-top: 1.25rem;">
+          <button class="btn btn-emerald btn-lg" id="btn-run-forecast" style="padding: 0.9rem 3rem; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em;">
+            Analyze Threat
+          </button>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div id="execution-progress" style="display: none; margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600;">
+            <span id="step-1-label" class="step-lbl active">1. Extracting States</span>
+            <span id="step-2-label" class="step-lbl">2. Classifying Threat Types</span>
+            <span id="step-3-label" class="step-lbl">3. Forecasting Future Risk</span>
+            <span id="step-4-label" class="step-lbl">4. Explaining Threat Drivers</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar-animated" id="anim-progress-bar" style="width: 25%;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         SECTION 2: EXECUTIVE THREAT ASSESSMENT
+         ========================================================================= -->
+    <div id="results-panel">
+      <!-- 4 Top KPI Cards -->
+      <div class="grid-4" style="margin-bottom: 1.5rem;">
+        
+        <!-- Threat Level Severity Gauge -->
+        <div class="metric-box" style="position: relative; overflow: hidden;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="metric-title">Infiltration Threat Level</span>
+            <span class="badge" id="badge-threat-level" style="background: rgba(239, 68, 68, 0.2); color: var(--crimson);">
+              CRITICAL
+            </span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin: 0.5rem 0;">
+            <span class="metric-value" id="kpi-risk-score" style="color: var(--crimson);">88.4%</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">overall severity</span>
+          </div>
+          <div class="risk-meter-bar">
+            <div id="kpi-risk-bar" class="risk-meter-fill" style="width: 88.4%; background: var(--crimson);"></div>
+          </div>
+          <span class="metric-sub" id="kpi-risk-sub">Autonomous threat level derived from network state dynamics</span>
+        </div>
+
+        <!-- Classified Primary Threat Type -->
+        <div class="metric-box">
+          <span class="metric-title">Primary Classified Threat</span>
+          <div style="margin: 0.5rem 0;">
+            <span class="stage-tag" id="kpi-stage-tag" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 1.15rem; padding: 0.35rem 0.8rem; border-radius: 6px; font-weight: 700;">
+              Lateral Movement
+            </span>
+          </div>
+          <span class="metric-sub" id="kpi-stage-desc">Dominant MITRE ATT&CK Phase</span>
+        </div>
+
+        <!-- Trajectory Trend -->
+        <div class="metric-box">
+          <span class="metric-title">Threat Trajectory</span>
+          <div style="margin: 0.5rem 0;">
+            <span id="kpi-trend" style="font-size: 1.25rem; font-weight: 700; color: #f59e0b;">
+              Escalating Intrusion ↗
+            </span>
+          </div>
+          <span class="metric-sub">Multi-step attack progression trend</span>
+        </div>
+
+        <!-- Forecast Horizon -->
+        <div class="metric-box">
+          <span class="metric-title">Forecast Horizon</span>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin: 0.5rem 0;">
+            <span class="metric-value" id="kpi-horizon" style="color: var(--cyan);">+150s</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">lookahead</span>
+          </div>
+          <span class="metric-sub">5 future evaluation windows (30s each)</span>
+        </div>
+      </div>
+
+      <!-- Main Visualizations Grid -->
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        
+        <!-- Graph 1: Threat Level Progression Over Time -->
+        <div class="card">
+          <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0;">
+               Threat Level Progression (Past & Future Forecast)
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+              Observed telemetry and next +150 seconds projected by LSTM World Model
+            </p>
+          </div>
+          <div class="card-body">
+            <div style="position: relative; height: 260px; width: 100%;">
+              <canvas id="chart-forecast-rollout" width="600" height="260"></canvas>
+            </div>
+            <!-- Lookahead Mini Cards -->
+            <div id="rollout-steps-container" class="rollout-steps-grid" style="margin-top: 1rem;"></div>
+          </div>
+        </div>
+
+        <!-- Graph 2: Threat Type Classification & Percentage Breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0;">
+               Threat Classification by Type (% Breakdown)
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+              Probability distribution across 6 MITRE ATT&CK kill-chain threat stages
+            </p>
+          </div>
+          <div class="card-body">
+            <div style="position: relative; height: 240px; width: 100%;">
+              <canvas id="chart-threat-types" width="600" height="240"></canvas>
+            </div>
+            <div id="threat-types-legend" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Row: Root Cause Drivers -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0;">
+             Root-Cause Threat Drivers (Why This Alert Triggered)
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+            Key anomalous network telemetry signals driving the risk level (SHAP Attribution)
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div style="position: relative; height: 200px; width: 100%;">
+              <canvas id="chart-threat-shap" width="600" height="200"></canvas>
+            </div>
+            <div id="shap-drivers-list" style="display: flex; flex-direction: column; justify-content: center;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Timeline Table -->
+      <section class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0;">
+            ⏱️ Analyzed Telemetry Timeline & Attack Progression
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">
+            Temporal windows analyzed from the active dataset
+          </p>
+        </div>
+        <div class="card-body" style="padding: 0;">
+          <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+            <table class="soc-table" id="timeline-table">
+              <thead>
+                <tr>
+                  <th>Window Step</th>
+                  <th>Interval</th>
+                  <th>Session</th>
+                  <th>Classified Threat Type</th>
+                  <th>Threat Level (%)</th>
+                  <th>Severity Tier</th>
+                  <th>Flow Count</th>
+                  <th>Byte Rate</th>
+                </tr>
+              </thead>
+              <tbody id="timeline-table-body">
+                <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Analyzing dataset...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Collapsible Technical Diagnostics (for Evaluators) -->
+      <section class="card" style="border-color: rgba(255, 255, 255, 0.08);">
+        <div class="accordion-header" id="btn-toggle-diagnostics">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.1rem;">⚙️</span>
+            <strong style="color: var(--cyan); font-size: 0.95rem;">Technical Model & Validation Diagnostics (For Evaluators)</strong>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">(NLL Training Loss, MITRE Confusion Matrix, Shuffling Sanity Check, Baselines)</span>
+          </div>
+          <span id="accordion-arrow" style="font-size: 0.85rem; color: var(--cyan);">▼ Click to Expand</span>
+        </div>
+
+        <div id="diagnostics-content" style="display: none; padding: 1.5rem; border-top: 1px solid var(--border-color);">
+          <div class="grid-2" style="margin-bottom: 1.25rem;">
+            <div>
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--cyan); margin: 0 0 0.5rem 0;">
+                LSTM Gaussian NLL Loss Convergence
+              </h4>
+              <div style="position: relative; height: 180px; width: 100%; background: rgba(5, 8, 16, 0.6); border-radius: 6px; padding: 0.5rem;">
+                <canvas id="chart-training-loss" width="500" height="180"></canvas>
+              </div>
+            </div>
+            <div>
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; color: var(--cyan); margin: 0 0 0.5rem 0;">
+                MITRE Stage Classification Matrix
+              </h4>
+              <div id="cm-container" style="max-height: 180px; overflow-x: auto; background: rgba(5, 8, 16, 0.6); border-radius: 6px; padding: 0.5rem;">
+                <table class="soc-table" id="diag-cm-table">
+                  <tbody id="diag-cm-body">
+                    <tr><td style="color: var(--text-muted);">Loading evaluation matrix...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.85rem; border-radius: 6px;">
+              <strong style="color: var(--emerald); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">
+                 Temporal Leakage Sanity Check (Permutation Shuffle Test)
+              </strong>
+              <p style="font-size: 0.775rem; color: var(--text-muted); margin: 0;" id="diag-leakage-text">
+                Temporal order scrambling degrades MSE by &ge; +8%, confirming genuine sequential autoregression and zero cross-temporal leakage.
+              </p>
+            </div>
+            <div style="background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); padding: 0.85rem; border-radius: 6px;">
+              <strong style="color: var(--cyan); font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">
+                ⚖️ Logistic Regression Baseline Benchmark
+              </strong>
+              <p style="font-size: 0.775rem; color: var(--text-muted); margin: 0;" id="diag-benchmark-text">
+                World Model maintains lower False Positive Rate (FPR) across imbalanced minority attack stages compared to static baselines.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="soc-footer">
+    <span>Network Attack Forecasting AI/ML World Model Core</span>
+    <span>Host: <code>http://localhost:5000</code> • 100% Offline & Local</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

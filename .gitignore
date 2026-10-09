@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Persisted user data & large binary caches (GitHub 100MB limit)
+data/persisted_upload/
+*.parquet
+*.pkl
+
+# Streamlit secrets (if any)
+.streamlit/secrets.toml
+
+# Environments
+env/
+venv/
+.venv/
+ENV/
+
+# System and editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

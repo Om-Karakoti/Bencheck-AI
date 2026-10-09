@@ -1,0 +1,741 @@
+<USER_REQUEST>
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisAI - Cyber Threat World Model SOC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --obsidian: #040d1a;
+            --navy-deep: #071221;
+            --cyan-glow: #00e5ff;
+            --crimson: #ef4444;
+            --cyber-grid: rgba(0, 229, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--obsidian);
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cyber-bg {
+            background-color: var(--obsidian);
+            background-image: 
+                radial-gradient(circle at center, transparent 0%, rgba(0, 229, 255, 0.05) 60%, rgba(4, 13, 26, 0.9) 100%),
+                linear-gradient(var(--cyber-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--cyber-grid) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            background-attachment: fixed;
+        }
+
+        .glass-panel {
+            background: rgba(7, 18, 33, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .neon-border-cyan {
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.05);
+        }
+
+        .neon-border-crimson {
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.05);
+        }
+
+        .glow-text-cyan {
+            text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+        }
+
+        .pulse-engine {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.9); }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, var(--cyan-glow), transparent);
+            opacity: 0.1;
+            animation: scan 4s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--obsidian);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 229, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 229, 255, 0.4);
+        }
+
+        /* Smooth transitions */
+        button, a {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Table optimizations */
+        table {
+            table-layout: fixed;
+        }
+
+        tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Input styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #00e5ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #00e5ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+            border: none;
+        }
+
+        /* Responsive optimizations */
+        @media (max-width: 768px) {
+            main { padding: 1rem !important; }
+            section { gap: 1rem !important; }
+            .glass-panel { padding: 1rem !important; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen cyber-bg relative overflow-x-hidden">
+        <div class="scan-line"></div>
+
+        <!-- NAVBAR -->
+        <nav id="main-nav" class="sticky top-0 z-50 glass-panel border-b border-white/10 px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center border border-cyan-500/30 shadow-[0_0_15px_rgba(0,229,255,0.2)]">
+                    <iconify-icon icon="lucide:shield-check" class="text-2xl text-[#00e5ff]"></iconify-icon>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tighter glow-text-cyan">
+                        AEGIS AI <span class="text-white/40 font-light">//</span> 
+                        <span class="text-sm text-cyan-400/80 uppercase tracking-widest">World Model SOC</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="hidden md:flex items-center gap-8">
+                <div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 pulse-engine shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                    <span class="text-[10px] mono uppercase tracking-widest font-bold text-emerald-400">Live Engine: Online</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-1 min-w-[200px]">
+                    <div class="flex justify-between w-full text-[9px] mono text-white/40">
+                        <span>HORIZON</span>
+                        <span class="text-cyan-400">+150s LOOKAHEAD</span>
+                    </div>
+                    <input type="range" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#00e5ff]" min="30" max="300" value="150">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                    <iconify-icon icon="lucide:bell" class="text-xl text-white/60"></iconify-icon>
+                </button>
+                <div class="h-8 w-[1px] bg-white/10"></div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-xs font-bold">Cpt. Sterling</p>
+                        <p class="text-[10px] text-white/40 mono">Level 4 Analyst</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-white/10 overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=sterling" alt="Avatar" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="p-8 max-w-[1700px] mx-auto space-y-8">
+            
+            <!-- SECTION 1: TELEMETRY INGESTION HUB -->
+            <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-10 glass-panel neon-border-cyan rounded-2xl p-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <iconify-icon icon="lucide:upload-cloud" class="text-8xl"></iconify-icon>
+                    </div>
+                    
+                    <h3 class="text-sm font-bold mono tracking-widest text-cyan-400 mb-6 flex items-center gap-2">
+                        <iconify-icon icon="lucide:database"></iconify-icon>
+                        TELEMETRY INGESTION HUB [STEP 01]
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- Column 1: Upload + Files -->
+                        <div class="space-y-4">
+                            <div class="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center bg-black/20 hover:border-cyan-500/40 transition-all cursor-pointer group">
+                                <iconify-icon icon="lucide:file-up" class="text-4xl text-white/20 group-hover:text-cyan-400 mb-2 transition-colors"></iconify-icon>
+                                <p class="text-sm text-white/60 text-center">Drag & drop packet capture CSVs<br><span class="text-[10px] text-white/30">MAX 400MB PER UPLOAD</span></p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] mono text-white/40 uppercase tracking-tighter">Persisted Data Sources</span>
+                                    <button class="text-[9px] text-red-400/60 hover:text-red-400 mono underline uppercase">[ Clear Buffer ]</button>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between bg-white/5 border border-white/10 p-3 rounded text-xs mono hover:bg-white/10">
+                                        <div class="flex items-center gap-2">
+                                            <iconify-icon icon="lucide:file-text" class="text-cyan-400"></iconify-icon>
+                                            <span>capture_dmz_flow.csv</span>
+                                            <span class="text-white/30 text-[9px]">4.3K flows</span>
+                                        </div>
+                                        <button class="text-red-500/50 hover:text-red-500"><iconify-icon icon="lucide:x"></iconify-icon></button>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-white/5 border border-white/10 p-3 rounded text-xs mono hover:bg-white/10">
+                                        <div class="flex items-center gap-2">
+                                            <iconify-icon icon="lucide:file-text" class="text-cyan-400"></iconify-icon>
+                                            <span>auth_logs_v2.csv</span>
+                                            <span class="text-white/30 text-[9px]">892 flows</span>
+                                        </div>
+                                        <button class="text-red-500/50 hover:text-red-500"><iconify-icon icon="lucide:x"></iconify-icon></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Test Scenarios -->
+                        <div class="space-y-4">
+                            <span class="text-[10px] mono text-white/40 uppercase block">Attack Simulation Presets</span>
+                            <div class="space-y-3">
+                                <button class="w-full p-4 bg-orange-500/5 border border-orange-500/20 text-orange-400 text-xs mono rounded-xl hover:bg-orange-500/10 transition-all flex items-center justify-between group">
+                                    <span>🎯 KILL-CHAIN MODEL</span>
+                                    <iconify-icon icon="lucide:chevron-right" class="group-hover:translate-x-1 transition-transform"></iconify-icon>
+                                </button>
+                                <button class="w-full p-4 bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 text-xs mono rounded-xl hover:bg-emerald-500/10 transition-all flex items-center justify-between group">
+                                    <span>🛡️ NORMAL BASELINE</span>
+                                    <iconify-icon icon="lucide:chevron-right" class="group-hover:translate-x-1 transition-transform"></iconify-icon>
+                                </button>
+                                <button class="w-full p-4 bg-red-500/5 border border-red-500/20 text-red-400 text-xs mono rounded-xl hover:bg-red-500/10 transition-all flex items-center justify-between group">
+                                    <span>💥 DATA EXFILTRATION</span>
+                                    <iconify-icon icon="lucide:chevron-right" class="group-hover:translate-x-1 transition-transform"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Column 3: Metrics -->
+                        <div class="space-y-4">
+                            <span class="text-[10px] mono text-white/40 uppercase block">Active Telemetry Stats</span>
+                            <div class="space-y-4">
+                                <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                                    <p class="text-[9px] mono text-white/40 uppercase">Flow count</p>
+                                    <p class="text-lg mono font-bold text-cyan-400">1,248,500</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                                    <p class="text-[9px] mono text-white/40 uppercase">Observed sessions</p>
+                                    <p class="text-lg mono font-bold text-purple-400">12 Live</p>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-xl border border-emerald-500/20">
+                                    <p class="text-[9px] mono text-white/40 uppercase">Pipeline</p>
+                                    <p class="text-lg mono font-bold text-emerald-400">NOMINAL ⚡</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                        <button class="w-full bg-gradient-to-r from-cyan-600 to-blue-700 py-3 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all flex items-center justify-center gap-2 border border-cyan-400/30">
+                            <iconify-icon icon="lucide:zap" class="text-xl"></iconify-icon>
+                            ANALYZE THREAT & FORECAST PROGRESSION
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-cyan-500 shadow-lg shadow-cyan-500/5">
+                        <p class="text-xs mono text-white/40 mb-2 uppercase tracking-widest">Total Flows</p>
+                        <p class="text-3xl mono font-bold tracking-tighter">1.2M+</p>
+                        <div class="w-full bg-white/5 h-1.5 mt-4 rounded-full overflow-hidden">
+                            <div class="bg-cyan-500 h-full w-[85%]"></div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-8 rounded-2xl border-l-4 border-emerald-500 shadow-lg shadow-emerald-500/5">
+                        <p class="text-xs mono text-white/40 mb-2 uppercase tracking-widest">Pipeline</p>
+                        <p class="text-3xl mono font-bold text-emerald-400 tracking-tighter">READY</p>
+                        <p class="text-[10px] text-white/20 mt-4 mono uppercase">Low Latency Mode Active</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: THREAT ASSESSMENT HUD -->
+            <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                <div class="glass-panel rounded-2xl p-8 neon-border-crimson relative overflow-hidden group shadow-2xl shadow-red-500/10">
+                    <div class="absolute -right-6 -top-6 text-crimson/5 group-hover:text-crimson/10 transition-colors">
+                        <iconify-icon icon="lucide:shield-alert" class="text-9xl"></iconify-icon>
+                    </div>
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-xs mono tracking-widest text-white/60">INFILTRATION RISK</span>
+                        <span class="px-3 py-1 rounded bg-red-500/20 text-red-500 text-xs font-bold border border-red-500/40">CRITICAL</span>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <h4 class="text-6xl font-bold mono text-red-500 tracking-tighter">78.4%</h4>
+                        <iconify-icon icon="lucide:trending-up" class="text-red-500 text-2xl"></iconify-icon>
+                    </div>
+                    <p class="text-xs text-white/40 mt-4 uppercase mono">+12.4% Increase detected</p>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-8 border-l-4 border-purple-500 shadow-xl shadow-purple-500/5">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] mono tracking-widest text-white/60">PRIMARY THREAT STAGE</span>
+                        <span class="text-[10px] text-purple-400 mono">85.2% CONF</span>
+                    </div>
+                    <h4 class="text-3xl font-bold text-purple-400 uppercase tracking-tight mb-3">Lateral Movement</h4>
+                    <div class="flex gap-1">
+                        <div class="h-1 flex-1 bg-purple-500/80 rounded-full"></div>
+                        <div class="h-1 flex-1 bg-purple-500/80 rounded-full"></div>
+                        <div class="h-1 flex-1 bg-purple-500/80 rounded-full"></div>
+                        <div class="h-1 flex-1 bg-purple-500/20 rounded-full"></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-8 border-l-4 border-orange-500/50">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] mono tracking-widest text-white/60">ATTACK TRAJECTORY</span>
+                        <iconify-icon icon="lucide:radar" class="text-orange-500"></iconify-icon>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg bg-orange-500/10 text-orange-500">
+                            <iconify-icon icon="lucide:arrow-up-right" class="text-2xl"></iconify-icon>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-bold">Escalating Intrusion</h4>
+                            <p class="text-[10px] text-white/40 mono">Target: Internal DB Core</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-8 border-l-4 border-cyan-500/50">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] mono tracking-widest text-white/60">SIMULATION HORIZON</span>
+                        <span class="text-[10px] text-cyan-400 mono">ESTIMATED</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h4 class="text-3xl font-bold mono">+150s</h4>
+                        <span class="text-white/40 text-xs">/ 5 STEPS</span>
+                    </div>
+                    <p class="text-[10px] text-white/40 mt-3 uppercase mono">High resolution predictive mode</p>
+                </div>
+            </section>
+
+            <!-- SECTION 3: FORECAST CHART -->
+            <section class="glass-panel rounded-2xl p-8 neon-border-cyan">
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold mono tracking-widest text-cyan-400 flex items-center gap-2 mb-2">
+                        <iconify-icon icon="lucide:line-chart"></iconify-icon>
+                        THREAT PROJECTIONS & FUTURE TRAJECTORY [STEP 03]
+                    </h3>
+                    <p class="text-[10px] text-white/40 uppercase">Autoregressive LSTM World Model Forecast</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button class="px-3 py-1 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">COMBINED</button>
+                    <button class="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 text-white/40 border border-white/10 hover:border-amber-500/30">RECON</button>
+                    <button class="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 text-white/40 border border-white/10 hover:border-orange-500/30">ACCESS</button>
+                    <button class="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 text-white/40 border border-white/10 hover:border-purple-500/30">LATERAL</button>
+                    <button class="px-3 py-1 rounded-full text-[10px] font-bold bg-white/5 text-white/40 border border-white/10 hover:border-red-500/30">EXFIL</button>
+                </div>
+
+                <div class="h-[400px] w-full relative">
+                    <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
+                        <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+                            <line x1="0" y1="50" x2="1000" y2="50"></line>
+                            <line x1="0" y1="100" x2="1000" y2="100"></line>
+                            <line x1="0" y1="150" x2="1000" y2="150"></line>
+                            <line x1="0" y1="200" x2="1000" y2="200"></line>
+                            <line x1="0" y1="250" x2="1000" y2="250"></line>
+                            <line x1="200" y1="0" x2="200" y2="300"></line>
+                            <line x1="400" y1="0" x2="400" y2="300"></line>
+                            <line x1="600" y1="0" x2="600" y2="300"></line>
+                            <line x1="800" y1="0" x2="800" y2="300"></line>
+                        </g>
+                        <path d="M0,250 L200,230 L400,180 L600,120 L800,80 L1000,50 L1000,100 L800,130 L600,180 L400,240 L200,270 L0,280 Z" fill="rgba(0, 229, 255, 0.05)"></path>
+                        <path d="M0,260 Q100,255 200,240 T400,200 T600,140 T800,90 T1000,60" fill="none" stroke="#00e5ff" stroke-width="3" stroke-linecap="round"></path>
+                        <path d="M0,280 Q150,270 300,275 T500,250 T700,220 T900,180" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"></path>
+                        <path d="M0,290 Q200,285 400,290 T700,280 T1000,250" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.4"></path>
+                        <line x1="200" y1="0" x2="200" y2="300" stroke="#00e5ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                    </svg>
+                </div>
+
+                <div class="flex justify-between mt-4 px-2 text-[10px] mono text-white/30 uppercase">
+                    <span>-30s</span>
+                    <span class="text-cyan-400">NOW</span>
+                    <span>+30s</span>
+                    <span>+60s</span>
+                    <span>+90s</span>
+                    <span>+120s</span>
+                    <span>+150s</span>
+                </div>
+            </section>
+
+            <!-- SECTION 4: BREAKDOWN & PROBABILITY -->
+            <section class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div class="glass-panel rounded-2xl p-8">
+                    <h3 class="text-[10px] font-bold mono tracking-widest text-white/60 mb-6 uppercase">
+                        ATTACK STAGE CLASSIFICATION [CONFIDENCE]
+                    </h3>
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-emerald-400">BENIGN / NORMAL</span>
+                                <span>12.4%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-emerald-500/30 rounded-full w-[12.4%]"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-amber-500">RECONNAISSANCE</span>
+                                <span>45.2%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-amber-500/50 rounded-full w-[45.2%]"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-orange-500">INITIAL ACCESS</span>
+                                <span>68.1%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-orange-500/70 rounded-full w-[68.1%]"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-purple-400">LATERAL MOVEMENT</span>
+                                <span>85.2%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-purple-500 rounded-full w-[85.2%] shadow-[0_0_10px_rgba(192,132,252,0.4)]"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-cyan-400">COMMAND & CONTROL</span>
+                                <span>22.0%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-cyan-500/40 rounded-full w-[22%]"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[11px] mono">
+                                <span class="text-red-500">DATA EXFILTRATION</span>
+                                <span>8.9%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full">
+                                <div class="h-full bg-red-500/20 rounded-full w-[8.9%]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-8 overflow-x-auto">
+                    <h3 class="text-[10px] font-bold mono tracking-widest text-white/60 mb-6 uppercase">
+                        THREAT VECTOR PROBABILITY MATRIX
+                    </h3>
+                    <table class="w-full text-left text-xs mono">
+                        <thead>
+                            <tr class="text-[10px] mono text-white/30 border-b border-white/10">
+                                <th class="pb-3 font-normal">VECTOR ID</th>
+                                <th class="pb-3 font-normal">TARGET ASSET</th>
+                                <th class="pb-3 font-normal">PROBABILITY</th>
+                                <th class="pb-3 font-normal">SEVERITY</th>
+                                <th class="pb-3 font-normal">STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="py-4">V-4092</td>
+                                <td class="py-4 text-white/70">CORE_AUTH_SERVICE</td>
+                                <td class="py-4 font-bold text-red-400">92.4%</td>
+                                <td class="py-4"><span class="text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 text-[9px]">CRITICAL</span></td>
+                                <td class="py-4 text-white/40">ACTIVE ALERT</td>
+                            </tr>
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="py-4">V-1204</td>
+                                <td class="py-4 text-white/70">DB_REPLICA_NODE_2</td>
+                                <td class="py-4 font-bold text-purple-400">88.1%</td>
+                                <td class="py-4"><span class="text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20 text-[9px]">HIGH</span></td>
+                                <td class="py-4 text-white/40">PROJECTION</td>
+                            </tr>
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="py-4">V-3855</td>
+                                <td class="py-4 text-white/70">WEB_LB_PRIMARY</td>
+                                <td class="py-4 font-bold text-amber-400">45.8%</td>
+                                <td class="py-4"><span class="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[9px]">GUARDED</span></td>
+                                <td class="py-4 text-white/40">MONITORING</td>
+                            </tr>
+                            <tr class="hover:bg-white/5">
+                                <td class="py-4">V-9921</td>
+                                <td class="py-4 text-white/70">SYS_BACKUP_VOL</td>
+                                <td class="py-4 font-bold text-white/40">12.0%</td>
+                                <td class="py-4"><span class="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 text-[9px]">NORMAL</span></td>
+                                <td class="py-4 text-white/40">STABLE</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECTION 5: SHAP EXPLAINABILITY -->
+            <section class="glass-panel rounded-2xl p-8 border-t-2 border-orange-500/30">
+                <h3 class="text-sm font-bold mono tracking-widest text-orange-400 mb-6 flex items-center gap-2">
+                    <iconify-icon icon="lucide:microscope"></iconify-icon>
+                    ROOT-CAUSE THREAT DRIVERS [SHAP EXPLAINABILITY]
+                </h3>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div class="space-y-4">
+                        <p class="text-[10px] mono text-white/40 uppercase">Feature Contribution to Risk Prediction</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-4">
+                                <span class="w-32 text-[10px] mono text-right">SYN/ACK RATIO</span>
+                                <div class="flex-1 h-5 bg-white/5 rounded flex items-center">
+                                    <div class="h-full bg-red-500 rounded-l shadow-[0_0_10px_rgba(239,68,68,0.4)]" style="width: 85%"></div>
+                                    <span class="ml-3 text-[10px] mono text-red-400">+0.42</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-32 text-[10px] mono text-right">PORT SCAN FREQ</span>
+                                <div class="flex-1 h-5 bg-white/5 rounded flex items-center">
+                                    <div class="h-full bg-orange-500 rounded-l" style="width: 65%"></div>
+                                    <span class="ml-3 text-[10px] mono text-orange-400">+0.28</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-32 text-[10px] mono text-right">FAN-OUT RATIO</span>
+                                <div class="flex-1 h-5 bg-white/5 rounded flex items-center">
+                                    <div class="h-full bg-orange-500 rounded-l" style="width: 45%"></div>
+                                    <span class="ml-3 text-[10px] mono text-orange-400">+0.18</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-32 text-[10px] mono text-right">OUTBOUND RATE</span>
+                                <div class="flex-1 h-5 bg-white/5 rounded flex items-center">
+                                    <div class="h-full bg-purple-500 rounded-l" style="width: 30%"></div>
+                                    <span class="ml-3 text-[10px] mono text-purple-400">+0.12</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="w-32 text-[10px] mono text-right">TCP WINDOW SIZE</span>
+                                <div class="flex-1 h-5 bg-white/5 rounded flex items-center">
+                                    <div class="h-full bg-emerald-500 rounded-l opacity-30" style="width: 15%"></div>
+                                    <span class="ml-3 text-[10px] mono text-emerald-400">-0.05</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/30 rounded-lg p-4 border border-white/5 overflow-x-auto">
+                        <table class="w-full text-left text-[10px] mono">
+                            <thead>
+                                <tr class="text-[9px] mono text-white/30 border-b border-white/10 uppercase">
+                                    <th class="pb-2 font-normal">Indicator</th>
+                                    <th class="pb-2 font-normal">Value</th>
+                                    <th class="pb-2 font-normal">Baseline</th>
+                                    <th class="pb-2 font-normal">Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-3 text-white/60">SYN/ACK RATIO</td>
+                                    <td class="py-3">1.42</td>
+                                    <td class="py-3 text-white/30">0.98</td>
+                                    <td class="py-3 text-red-500 font-bold tracking-widest">HIGHEST</td>
+                                </tr>
+                                <tr class="border-b border-white/5">
+                                    <td class="py-3 text-white/60">PORT SCAN CNT</td>
+                                    <td class="py-3">42/min</td>
+                                    <td class="py-3 text-white/30">2/min</td>
+                                    <td class="py-3 text-orange-500">HIGH</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 text-white/60">BYTE RATE OUT</td>
+                                    <td class="py-3">12.5MB/s</td>
+                                    <td class="py-3 text-white/30">0.2MB/s</td>
+                                    <td class="py-3 text-purple-400">MEDIUM</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: TIMELINE AUDIT -->
+            <section class="glass-panel rounded-2xl overflow-hidden border border-white/10">
+                <div class="bg-white/5 px-6 py-4 border-b border-white/10 flex justify-between items-center">
+                    <h3 class="text-[10px] font-bold mono tracking-widest text-white/60 uppercase">
+                        TELEMETRY TIMELINE & INCIDENT PROGRESSION [STEP 06]
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <span class="text-[9px] mono text-emerald-400">AUTO-REFRESH: ON</span>
+                        <iconify-icon icon="lucide:download" class="text-white/40 hover:text-white cursor-pointer"></iconify-icon>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[10px] mono text-white/40 bg-black/20">
+                                <th class="p-4 border-r border-white/5 font-normal">STEP #</th>
+                                <th class="p-4 border-r border-white/5 font-normal">TIME INTERVAL</th>
+                                <th class="p-4 border-r border-white/5 font-normal">CLASSIFIED STAGE</th>
+                                <th class="p-4 border-r border-white/5 font-normal">RISK (%)</th>
+                                <th class="p-4 border-r border-white/5 font-normal text-center">SEVERITY</th>
+                                <th class="p-4 border-r border-white/5 font-normal">FLOW COUNT</th>
+                                <th class="p-4 font-normal">BYTE RATE</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs mono">
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="p-4 text-white/40">0082</td>
+                                <td class="p-4">T+450.0s</td>
+                                <td class="p-4 text-red-400">Exfiltration</td>
+                                <td class="p-4 font-bold">94.2%</td>
+                                <td class="p-4 text-center"><span class="bg-red-500/10 text-red-500 px-2 py-0.5 rounded border border-red-500/20 text-[9px]">CRITICAL</span></td>
+                                <td class="p-4">42,501</td>
+                                <td class="p-4 text-red-400">184.2 Mbps</td>
+                            </tr>
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="p-4 text-white/40">0081</td>
+                                <td class="p-4">T+420.0s</td>
+                                <td class="p-4 text-purple-400">Lateral Movement</td>
+                                <td class="p-4">85.2%</td>
+                                <td class="p-4 text-center"><span class="bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded border border-orange-500/20 text-[9px]">HIGH</span></td>
+                                <td class="p-4">12,042</td>
+                                <td class="p-4">24.5 Mbps</td>
+                            </tr>
+                            <tr class="border-b border-white/5 hover:bg-white/5">
+                                <td class="p-4 text-white/40">0080</td>
+                                <td class="p-4">T+390.0s</td>
+                                <td class="p-4 text-orange-400">Initial Access</td>
+                                <td class="p-4">64.1%</td>
+                                <td class="p-4 text-center"><span class="bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded border border-orange-500/20 text-[9px]">HIGH</span></td>
+                                <td class="p-4">2,104</td>
+                                <td class="p-4">2.1 Mbps</td>
+                            </tr>
+                            <tr class="hover:bg-white/5">
+                                <td class="p-4 text-white/40">0079</td>
+                                <td class="p-4">T+360.0s</td>
+                                <td class="p-4 text-amber-500">Reconnaissance</td>
+                                <td class="p-4">42.8%</td>
+                                <td class="p-4 text-center"><span class="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded border border-amber-500/20 text-[9px]">GUARDED</span></td>
+                                <td class="p-4">892</td>
+                                <td class="p-4 text-white/40">420 Kbps</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="p-4 bg-black/40 border-t border-white/5">
+            <div class="max-w-[1700px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-8 text-[9px] mono text-white/30 uppercase tracking-widest">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        <span>SYS_UPTIME: 99.998%</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        <span>ENC_LEVEL: MIL-STD-810H</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        <span>MODEL_VER: AEGIS_WORLD_V4.2.0</span>
+                    </div>
+                </div>
+                <div class="text-[9px] mono text-white/20">
+                    © 2024 AEGIS AI SECURITY SYSTEMS // ALL RIGHTS RESERVED
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html> implement this ui with the current one
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-25T22:33:00+05:30.
+</ADDITIONAL_METADATA>
