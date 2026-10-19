@@ -21,7 +21,7 @@ Bencheck was designed to bridge that gap:
 1. **Forecast instead of react**: Projects network state vectors $k$-steps into the future so defenders can cut off routes before exfiltration starts.
 2. **Strict causal time tracking**: Prevents future-state leakage during feature extraction. Training and evaluation strictly respect chronological flow boundaries.
 3. **Zero-fluff SOC console**: Built for analysts on 1440p desktop monitors as well as on-call engineers triaging incidents on a phone. Clean obsidian-and-cyan palette, no emojis, and zero unnecessary visual bloat.
-4. **Local persistence that doesn't hang**: Ingests multi-file CSV dumps up to 400 MB, caches them to disk via Parquet, and keeps your uploaded buffer intact when you hit browser refresh.
+4. **Bounded-memory telemetry ingestion**: Accepts CSV files up to 1 GB each, reads them in chunks, and retains only the latest model-ready telemetry buffer for responsive forecasting. Active uploads are persisted locally via compact Parquet tails while the deployment is running.
 
 ---
 
@@ -108,8 +108,9 @@ python run_server.py
 ## Using the Dashboard
 
 1. **Telemetry Source Buffer**:
-   - Drag and drop one or more packet capture / network flow CSVs (up to 400 MB).
-   - Files are automatically saved to local storage (`data/persisted_upload/`), so hitting browser refresh won't wipe your uploaded files.
+   - Drag and drop one or more packet capture / network flow CSVs (up to 1 GB per file).
+   - Files are streamed in 25,000-row chunks. The app keeps only the latest 25,000 flows required by the forecasting pipeline, rather than retaining the complete upload in pandas memory.
+   - Active source tails are saved to local storage (`data/persisted_upload/`) and are available after browser refresh while the Streamlit deployment remains running.
    - Remove individual files with the `✕ REMOVE` button or wipe everything with `REMOVE ALL FILES (CLEAR)`.
 2. **Built-in Presets**:
    - If you don't have a capture file ready, click one of the quick simulation buttons:
@@ -166,7 +167,7 @@ bencheck/
 
 ## Hardware & Performance Notes
 
-- **Memory footprint**: Peak RAM consumption during 400 MB file processing is capped under 1.8 GB via chunked ingestion and type downcasting (`float32` / `int32`).
+- **Memory footprint**: CSV parsing uses 25,000-row chunks and a bounded 25,000-flow inference buffer, preventing full-file pandas DataFrames and full multi-file concatenation from accumulating in RAM.
 - **Inference latency**: Replay buffer evaluations and 5-step rollouts run in under 450 ms on standard modern CPU hardware (no dedicated GPU required for inference).
 - **Temporal Caching**: Scrubbing the horizon slider reuses in-memory normalizers and feature windows, giving zero-lag slider updates.
 
