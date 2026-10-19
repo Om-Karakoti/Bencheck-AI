@@ -424,6 +424,15 @@ div[data-testid="stAlert"] {
 
 /* Mobile & Android Responsive Breakpoints (Zero Text Break / Zero Overflow) */
 @media (max-width: 768px) {
+  .main .block-container { padding: 0.8rem 0.65rem 1.5rem !important; }
+  [data-testid="stHeader"] { min-height: 0 !important; }
+  .soc-heading { white-space: normal !important; align-items: flex-start; flex-wrap: wrap; }
+  .soc-heading-tag { margin-top: 0.05rem; }
+  .file-chip { white-space: normal !important; overflow-wrap: anywhere; }
+  div[data-testid="stHorizontalBlock"] { gap: 0.55rem !important; }
+  div[data-testid="stHorizontalBlock"] > div[data-testid="column"] { min-width: 0 !important; }
+  div[data-testid="stFileUploader"] { padding: 0.5rem !important; }
+  div.stButton > button { width: 100% !important; }
   .soc-heading-sub { display: none !important; }
   .glass-panel { padding: 0.85rem !important; }
   
@@ -467,6 +476,11 @@ from src.data.causal_windowing import CausalNetworkStateExtractor, NETWORK_STATE
 from src.data.split import session_train_test_split
 from src.data.dataset import WorldModelSequenceDataset, StateNormalizer
 from src.data.synthetic import generate_synthetic_dataset
+from src.data.streaming_ingestion import (
+    INGESTION_TAIL_ROWS,
+    ingest_uploaded_files,
+    remove_source,
+)
 from src.models.lstm_world_model import NumpyLSTMWorldModel
 from src.models.trainer import train_world_model
 from src.models.infiltration_scorer import derive_infiltration_score, InfiltrationAssessment
@@ -546,35 +560,27 @@ def clear_persisted_dataset():
                 os.remove(f)
             except Exception:
                 pass
+    source_dir = os.path.join(PERSIST_DIR, "source_tails")
+    if os.path.exists(source_dir):
+        import shutil
+        shutil.rmtree(source_dir)
 
 def remove_single_file(target_file: str):
-    """Remove a single specific file from the active dataset and update persistence."""
-    df = st.session_state.get("current_df")
+    """Remove a file and rebuild the bounded inference buffer from source tails."""
     meta = st.session_state.get("persisted_meta", {})
     file_list = meta.get("file_names", [])
 
-    if df is None or target_file not in file_list:
+    if target_file not in file_list:
         return
-
-    if "_source_file" in df.columns:
-        remaining_df = df[df["_source_file"] != target_file].copy()
-    else:
-        remaining_df = pd.DataFrame()
-
-    remaining_files = [f for f in file_list if f != target_file]
-
-    if remaining_files and len(remaining_df) > 0:
-        save_persisted_dataset(remaining_df, remaining_files)
+    remaining_df, remaining_meta = remove_source(target_file, PERSIST_DIR, DATA_FILE, META_FILE)
+    if remaining_df is not None and remaining_meta is not None:
         st.session_state["current_df"] = remaining_df
-        st.session_state["persisted_meta"] = {
-            "file_names": remaining_files,
-            "total_flows": len(remaining_df)
-        }
-        st.session_state["dataset_label"] = f"{len(remaining_files)} File(s) Persisted"
+        st.session_state["persisted_meta"] = remaining_meta
+        st.session_state["dataset_label"] = remaining_meta["dataset_label"]
         st.session_state["is_user_persisted"] = True
         st.session_state["analysis_cache"] = None
-        st.session_state["processed_upload_ids"] = [(fn, 0) for fn in remaining_files]
-        st.success(f"[SUCCESS] Removed '{target_file}'. {len(remaining_files)} file(s) remaining ({len(remaining_df):,} flows).")
+        st.session_state["processed_upload_ids"] = []
+        st.success(f"[SUCCESS] Removed '{target_file}'. {len(remaining_meta['file_names'])} file(s) remaining ({remaining_meta['total_flows']:,} flows).")
     else:
         clear_persisted_dataset()
         st.session_state["current_df"] = None
@@ -623,6 +629,8 @@ if "initialized" not in st.session_state:
 
 if "processed_upload_ids" not in st.session_state:
     st.session_state["processed_upload_ids"] = []
+if "uploader_generation" not in st.session_state:
+    st.session_state["uploader_generation"] = 0
 
 # =========================================================================
 # CACHED MODEL ENGINE (SINGLE INITIALIZATION IN MEMORY)
@@ -823,7 +831,7 @@ with ingest_container:
     with col_up:
         st.markdown(
             "<div style='font-family:JetBrains Mono, monospace; font-size:0.72rem; color:rgba(255,255,255,0.45); text-transform:uppercase; margin-bottom:0.35rem;'>"
-            "Telemetry Source Ingestion (Max 400MB)</div>",
+            "Telemetry Source Ingestion (Large CSVs, streamed in chunks)</div>",
             unsafe_allow_html=True
         )
 
@@ -831,51 +839,32 @@ with ingest_container:
             "Drag & drop packet capture CSVs",
             type=["csv"],
             accept_multiple_files=True,
-            help="Select one or more CSV files. Files are automatically saved locally and survive browser refresh until manually removed.",
+            key=f"telemetry_upload_{st.session_state['uploader_generation']}",
+            help="Select one or more CSV files. They are processed one file at a time and only the inference-ready telemetry buffer remains in memory.",
             label_visibility="collapsed",
         )
 
         current_upload_ids = [(f.name, f.size) for f in uploaded_files] if uploaded_files else []
         if current_upload_ids and current_upload_ids != st.session_state.get("processed_upload_ids"):
-            with st.spinner("Ingesting and persisting telemetry flows across refreshes..."):
-                dfs = []
-                file_names = []
-                for uf in uploaded_files:
-                    try:
-                        temp_df = pd.read_csv(uf, low_memory=False)
-                        for c in temp_df.select_dtypes(include=["float64"]).columns:
-                            temp_df[c] = temp_df[c].astype(np.float32)
-                        for c in temp_df.select_dtypes(include=["int64"]).columns:
-                            temp_df[c] = temp_df[c].astype(np.int32)
-                        temp_df["_source_file"] = uf.name
-                        dfs.append(temp_df)
-                        file_names.append(uf.name)
-                    except Exception as e:
-                        st.error(f"Error parsing '{uf.name}': {e}")
-
-                if dfs:
-                    combined = dfs[0] if len(dfs) == 1 else pd.concat(dfs, ignore_index=True)
-                    del dfs
-                    gc.collect()
-
-                    if "timestamp" in combined.columns:
-                        combined.sort_values(by="timestamp", inplace=True)
-                        combined.reset_index(drop=True, inplace=True)
-
-                    save_persisted_dataset(combined, file_names)
+            with st.spinner("Streaming telemetry files into the bounded inference buffer..."):
+                try:
+                    combined, meta = ingest_uploaded_files(uploaded_files, PERSIST_DIR, DATA_FILE, META_FILE)
                     st.session_state["current_df"] = combined
-                    st.session_state["persisted_meta"] = {"file_names": file_names, "total_flows": len(combined)}
-                    st.session_state["dataset_label"] = f"{len(file_names)} File(s) Persisted"
+                    st.session_state["persisted_meta"] = meta
+                    st.session_state["dataset_label"] = meta["dataset_label"]
                     st.session_state["is_user_persisted"] = True
                     st.session_state["processed_upload_ids"] = current_upload_ids
                     st.session_state["analysis_cache"] = None
-                    st.success(f"[SUCCESS] Ingested and persisted {len(file_names)} file(s) ({len(combined):,} flows). Files will not be removed on refresh.")
+                    # Rendering a fresh widget drops Streamlit's old UploadedFile RAM buffers.
+                    st.session_state["uploader_generation"] += 1
+                    st.success(f"[SUCCESS] Ingested {len(meta['file_names'])} file(s) ({meta['total_flows']:,} flows). Using the latest {len(combined):,} flows for real-time analysis.")
                     st.rerun()
+                except Exception as e:
+                    st.error(f"Error parsing telemetry files: {e}")
 
         if st.session_state.get("is_user_persisted", False):
             meta = st.session_state.get("persisted_meta", {})
             file_list = meta.get("file_names", [])
-            curr_df = st.session_state.get("current_df")
 
             st.markdown(
                 "<div style='display:flex; justify-content:space-between; align-items:center; margin-top:0.6rem; margin-bottom:0.3rem;'>"
@@ -885,7 +874,8 @@ with ingest_container:
             )
 
             for idx, fn in enumerate(file_list):
-                f_flows = len(curr_df[curr_df["_source_file"] == fn]) if (curr_df is not None and "_source_file" in curr_df.columns) else (len(curr_df) if curr_df is not None else 0)
+                source_meta = next((item for item in meta.get("files", []) if item["name"] == fn), {})
+                f_flows = source_meta.get("total_flows", 0)
                 c_fn_text, c_fn_btn = st.columns([0.65, 0.35])
                 fn_disp = fn if len(fn) <= 20 else fn[:17] + "..."
                 with c_fn_text:
@@ -990,7 +980,8 @@ with ingest_container:
                 st.session_state["dataset_label"] = "Multi-Stage Attack (Default)"
 
         df = st.session_state.get("current_df")
-        flow_count_str = f"{len(df):,}" if df is not None else "0"
+        total_ingested = st.session_state.get("persisted_meta", {}).get("total_flows")
+        flow_count_str = f"{total_ingested:,}" if total_ingested is not None else (f"{len(df):,}" if df is not None else "0")
         sessions_cnt = len(df["session_id"].unique()) if (df is not None and "session_id" in df.columns) else 1
         is_analyzed = st.session_state.get("analysis_cache") is not None
         status_str = "NOMINAL [OPTIMAL]" if is_analyzed else "STANDBY [READY]"
@@ -1029,7 +1020,7 @@ if df is not None and need_recompute:
     config, normalizer, world_model, stage_mapper, explainer = get_trained_models()
 
     with st.spinner("Analyzing telemetry dynamics, classifying threats & generating forecast..."):
-        MAX_FLOWS_FOR_WINDOWING = 25000
+        MAX_FLOWS_FOR_WINDOWING = INGESTION_TAIL_ROWS
         if len(df) > MAX_FLOWS_FOR_WINDOWING:
             window_df = df.iloc[-MAX_FLOWS_FOR_WINDOWING:].copy()
         else:
