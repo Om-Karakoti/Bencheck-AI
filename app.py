@@ -567,7 +567,7 @@ def clear_persisted_dataset():
 
 def remove_single_file(target_file: str):
     """Remove a file and rebuild the bounded inference buffer from source tails."""
-    meta = st.session_state.get("persisted_meta", {})
+    meta = st.session_state.get("persisted_meta") or {}
     file_list = meta.get("file_names", [])
 
     if target_file not in file_list:
@@ -863,7 +863,7 @@ with ingest_container:
                     st.error(f"Error parsing telemetry files: {e}")
 
         if st.session_state.get("is_user_persisted", False):
-            meta = st.session_state.get("persisted_meta", {})
+            meta = st.session_state.get("persisted_meta") or {}
             file_list = meta.get("file_names", [])
 
             st.markdown(
@@ -980,7 +980,7 @@ with ingest_container:
                 st.session_state["dataset_label"] = "Multi-Stage Attack (Default)"
 
         df = st.session_state.get("current_df")
-        total_ingested = st.session_state.get("persisted_meta", {}).get("total_flows")
+        total_ingested = (st.session_state.get("persisted_meta") or {}).get("total_flows")
         flow_count_str = f"{total_ingested:,}" if total_ingested is not None else (f"{len(df):,}" if df is not None else "0")
         sessions_cnt = len(df["session_id"].unique()) if (df is not None and "session_id" in df.columns) else 1
         is_analyzed = st.session_state.get("analysis_cache") is not None
