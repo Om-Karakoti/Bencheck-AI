@@ -485,6 +485,7 @@ from src.models.lstm_world_model import NumpyLSTMWorldModel
 from src.models.trainer import train_world_model
 from src.models.infiltration_scorer import derive_infiltration_score, InfiltrationAssessment
 from src.models.forecaster import rollout_and_score
+from src.models.replay import replay_recent_windows
 from src.models.mitre_mapper import MITREStageMapper, CANONICAL_STAGES
 from src.models.explainability import InfiltrationSHAPExplainer
 
@@ -1137,6 +1138,17 @@ if df is not None and need_recompute:
             })
         timeline_df = pd.DataFrame(timeline_records)
 
+        replay_result = replay_recent_windows(
+            windowed=windowed,
+            normalizer=normalizer,
+            model=world_model,
+            stage_mapper=stage_mapper,
+            history_length=hist_len,
+            forecast_steps=k_steps,
+            time_step_sec=config.window_size_sec,
+            max_replay_windows=20,
+        )
+
         cached_result = {
             "current_risk_score": current_risk_score,
             "current_threat_level": current_threat_level,
@@ -1149,6 +1161,9 @@ if df is not None and need_recompute:
             "multi_df": multi_df,
             "driver_df": driver_df,
             "timeline_df": timeline_df,
+            "replay_df": replay_result.replay_df,
+            "arrival_df": replay_result.arrival_df,
+            "escalation_alert": replay_result.escalation_alert,
         }
         st.session_state["analysis_cache"] = cached_result
         st.session_state["cached_k_steps"] = k_steps
@@ -1175,6 +1190,9 @@ threat_trajectories = cache["threat_trajectories"]
 multi_df = cache["multi_df"]
 driver_df = cache["driver_df"]
 timeline_df = cache["timeline_df"]
+replay_df = cache.get("replay_df", pd.DataFrame())
+arrival_df = cache.get("arrival_df", pd.DataFrame())
+escalation_alert = cache.get("escalation_alert")
 
 # =========================================================================
 # SECTION 2: THREAT ASSESSMENT HUD [STEP 02] (MILITARY-GRADE SOC CARDS)
@@ -1377,6 +1395,42 @@ else:
     )
 
 st.markdown("</div>", unsafe_allow_html=True)
+
+# =========================================================================
+# SECTION 4: CAUSAL REPLAY & ESCALATION ALERT [STEP 04]
+# =========================================================================
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    "<div class='soc-heading crimson'><span class='soc-heading-tag crimson'>STEP 04</span>"
+    "<span>CAUSAL REPLAY & ESCALATION</span>"
+    "<span class='soc-heading-sub'>LAST 20 × 30-SECOND WINDOWS</span></div>",
+    unsafe_allow_html=True,
+)
+
+if escalation_alert:
+    st.error(
+        f"ESCALATION FORECAST: {escalation_alert['stage']} predicted in "
+        f"+{escalation_alert['arrival_seconds']}s ({escalation_alert['confidence']:.1f}% confidence). "
+        "This is the single de-duplicated alert for the replay."
+    )
+else:
+    st.success("No stage escalation met the forecast confidence threshold during the 20-window replay.")
+
+replay_col, arrival_col = st.columns([1.35, 0.85])
+with replay_col:
+    if not replay_df.empty:
+        replay_chart = alt.Chart(replay_df).mark_line(point=True, strokeWidth=3).encode(
+            x=alt.X("Window End:Q", title="Observed window end (seconds)", axis=alt.Axis(labelColor="#94a3b8", titleColor="#94a3b8")),
+            y=alt.Y("Forecast Peak Risk (%):Q", scale=alt.Scale(domain=[0, 100]), title="Forecast peak risk (%)", axis=alt.Axis(labelColor="#94a3b8", titleColor="#94a3b8")),
+            color=alt.Color("Escalation Predicted:N", scale=alt.Scale(domain=["NO", "YES"], range=["#00e5ff", "#ef4444"]), title="Escalation"),
+            tooltip=["Window End:Q", "Observed Stage:N", "Observed Risk (%):Q", "Forecast Peak Risk (%):Q", "Escalation Predicted:N"],
+        ).properties(height=255).configure_view(strokeOpacity=0, fill="rgba(7, 18, 33, 0.9)")
+        st.altair_chart(replay_chart, use_container_width=True)
+with arrival_col:
+    st.markdown("<div class='soc-heading'><span class='soc-heading-tag'>ARRIVAL</span><span>PREDICTED STAGE ARRIVAL</span></div>", unsafe_allow_html=True)
+    if not arrival_df.empty:
+        st.dataframe(arrival_df, use_container_width=True, hide_index=True)
 
 # =========================================================================
 # SECTION 4: BREAKDOWN & THREAT MATRIX [STEP 04]
