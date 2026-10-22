@@ -120,11 +120,13 @@ python run_server.py
 3. **Configuring Lookahead**:
    - Adjust the **Lookahead Horizon** slider in the sidebar from $+30\text{s}$ up to $+300\text{s}$ (5 minutes ahead).
 4. **Setting an Alert Threshold**:
-   - Adjust the **Alert Risk Threshold (%)** slider in the sidebar (5%–100%, default 50%).
+   - Adjust the **Alert Risk Threshold (%)** slider in the sidebar (15%–100%, default 50%).
    - An alert banner appears in the Threat Assessment HUD when either condition is met:
      - Any forecast step reaches the configured risk threshold, or
      - `Lateral Movement`, `Command & Control`, or `Exfiltration` is predicted as the dominant stage inside the horizon. This stage rule always fires, regardless of the threshold, because post-compromise stages warrant a page even at a low composite risk score.
    - The banner reports the breach step as an ETA (e.g. `+90s`). Moving the slider re-evaluates the cached forecast, so it costs no extra inference.
+   - **Alerts de-duplicate.** Each escalation announces once, keyed on the escalating stage. While that same stage persists the banner downgrades to an amber `ONGOING` notice instead of re-paging, so analyst interactions and forecast refreshes never stack duplicate alerts.
+   - **Re-arming uses hysteresis.** Alerting re-arms only once forecast peak risk falls below the threshold by a 10-point margin (default 50% ⇒ re-arms under 40%) *and* no severe stage is still predicted. Requiring both stops a long-lived stage from re-firing every time risk wobbles through the band. Switching telemetry source resets the gate.
 5. **Threat Assessment HUD**:
    - Inspect overall infiltration risk, primary threat stage, active trajectory direction, and interactive SHAP driver breakdowns.
 

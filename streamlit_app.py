@@ -486,7 +486,7 @@ from src.models.trainer import train_world_model
 from src.models.infiltration_scorer import derive_infiltration_score, InfiltrationAssessment
 from src.models.forecaster import rollout_and_score
 from src.models.replay import replay_recent_windows
-from src.models.alerting import evaluate_alert, SEVERE_STAGES
+from src.models.alerting import AlertGate, DEFAULT_HYSTERESIS_MARGIN, SEVERE_STAGES
 from src.models.mitre_mapper import MITREStageMapper, CANONICAL_STAGES
 from src.models.explainability import InfiltrationSHAPExplainer
 
@@ -740,17 +740,20 @@ with st.sidebar:
     )
     alert_risk_pct = st.slider(
         "Alert Risk Threshold (%)",
-        min_value=5,
+        min_value=15,
         max_value=100,
         value=50,
         step=5,
         help=(
             "Fires when any forecast step reaches this risk level, or when "
             "Lateral Movement, Command & Control, or Exfiltration is predicted "
-            "inside the lookahead horizon."
+            "inside the lookahead horizon. Each escalation alerts once and is not "
+            "repeated while the same stage persists; alerting re-arms only after "
+            "forecast risk falls 10 points below this threshold."
         ),
     )
     alert_threshold = alert_risk_pct / 100.0
+    alert_arm_pct = max(0, alert_risk_pct - int(DEFAULT_HYSTERESIS_MARGIN * 100))
     severe_stage_chip = " &middot; ".join(
         stage.upper().replace("&", "&amp;") for stage in SEVERE_STAGES
     )
@@ -760,7 +763,8 @@ with st.sidebar:
         "<div style='color:rgba(255,255,255,0.5); text-transform:uppercase; font-size:0.68rem;'>ARMED ALERTING</div>"
         f"<div style='color:#ef4444; font-weight:700; font-size:1.05rem; margin-top:2px;'>&ge; {alert_risk_pct}% FORECAST RISK</div>"
         f"<div style='color:rgba(255,255,255,0.45); font-size:0.66rem; margin-top:6px; line-height:1.5;'>"
-        f"ALWAYS-ON STAGES:<br/>{severe_stage_chip}</div></div>",
+        f"ALWAYS-ON STAGES:<br/>{severe_stage_chip}<br/>"
+        f"RE-ARMS BELOW &lt;{alert_arm_pct}% RISK</div></div>",
         unsafe_allow_html=True
     )
 
@@ -1232,8 +1236,14 @@ arrival_df = cache.get("arrival_df", pd.DataFrame())
 escalation_alert = cache.get("escalation_alert")
 
 # Evaluated on cached rollout output so scrubbing the sidebar threshold never
-# forces a recompute of the forecasting pipeline.
-alert_eval = evaluate_alert(
+# forces a recompute of the forecasting pipeline. The gate lives in session state so
+# an escalation announces once instead of on every rerun, and is reset when the
+# analyst swaps telemetry source.
+if st.session_state.get("alert_gate_dataset") != st.session_state.get("dataset_label"):
+    st.session_state["alert_gate"] = AlertGate()
+    st.session_state["alert_gate_dataset"] = st.session_state.get("dataset_label")
+
+alert_decision = st.session_state["alert_gate"].decide(
     forecast_scores=cache.get("forecast_risk_scores", []),
     forecast_stages=cache.get("forecast_stages", []),
     threshold=alert_threshold,
@@ -1254,8 +1264,14 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if alert_eval.triggered:
-    st.error(alert_eval.message)
+if alert_decision.notify:
+    st.error(alert_decision.message)
+elif alert_decision.ongoing:
+    st.warning(
+        f"ONGOING // {alert_decision.reasons_text} "
+        "Already raised for this escalation and will not repeat while it persists. "
+        f"Re-arms below {alert_decision.arm_level * 100:.0f}% forecast risk."
+    )
 
 h1, h2, h3, h4 = st.columns(4)
 

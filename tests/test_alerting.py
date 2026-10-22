@@ -1,6 +1,12 @@
 import unittest
 
-from src.models.alerting import SEVERE_STAGES, evaluate_alert
+from src.models.alerting import (
+    RISK_ESCALATION,
+    AlertGate,
+    DEFAULT_HYSTERESIS_MARGIN,
+    SEVERE_STAGES,
+    evaluate_alert,
+)
 
 
 class TestAlertThreshold(unittest.TestCase):
@@ -87,6 +93,89 @@ class TestAlertThreshold(unittest.TestCase):
             SEVERE_STAGES,
             ("Lateral Movement", "Command & Control", "Exfiltration"),
         )
+
+
+class TestAlertDeduplication(unittest.TestCase):
+    def setUp(self):
+        self.gate = AlertGate(margin=0.10)
+
+    def test_raises_once_then_suppresses_the_same_escalation(self):
+        first = self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        second = self.gate.decide([0.62], ["Lateral Movement"], threshold=0.50)
+
+        self.assertTrue(first.notify)
+        self.assertFalse(second.notify)
+        self.assertTrue(second.ongoing)
+        self.assertEqual(second.latched, ["Lateral Movement"])
+
+    def test_holds_the_latch_while_the_stage_persists_even_if_risk_dips(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        dipped = self.gate.decide([0.10], ["Lateral Movement"], threshold=0.50)
+
+        self.assertFalse(dipped.rearmed)
+        self.assertFalse(dipped.notify)
+        self.assertTrue(dipped.ongoing)
+
+    def test_rearms_only_after_risk_clears_the_margin_and_the_stage_gone(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        cleared = self.gate.decide([0.35], ["Reconnaissance"], threshold=0.50)
+        re_escalated = self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+
+        self.assertTrue(cleared.rearmed)
+        self.assertEqual(cleared.latched, [])
+        self.assertTrue(re_escalated.notify)
+
+    def test_risk_inside_the_hysteresis_band_does_not_rearm(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        in_band = self.gate.decide([0.42], ["Reconnaissance"], threshold=0.50)
+
+        self.assertFalse(in_band.rearmed)
+        self.assertEqual(in_band.latched, ["Lateral Movement"])
+        self.assertEqual(in_band.arm_level, 0.40)
+
+    def test_a_different_stage_is_its_own_escalation(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        escalated = self.gate.decide([0.61], ["Exfiltration"], threshold=0.50)
+
+        self.assertTrue(escalated.notify)
+        self.assertEqual(escalated.latched, ["Lateral Movement", "Exfiltration"])
+
+    def test_risk_only_breach_latches_under_its_own_identity(self):
+        first = self.gate.decide([0.60], ["Reconnaissance"], threshold=0.50)
+        repeat = self.gate.decide([0.65], ["Reconnaissance"], threshold=0.50)
+
+        self.assertEqual(first.latched, [RISK_ESCALATION])
+        self.assertFalse(repeat.notify)
+        self.assertTrue(repeat.ongoing)
+
+    def test_no_breach_never_announces(self):
+        decision = self.gate.decide([0.10], ["Benign"], threshold=0.50)
+
+        self.assertFalse(decision.notify)
+        self.assertFalse(decision.ongoing)
+        self.assertEqual(decision.latched, [])
+
+    def test_reset_forgets_every_announced_escalation(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        self.gate.reset()
+        after_reset = self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+
+        self.assertTrue(after_reset.notify)
+
+    def test_gate_uses_the_module_default_margin(self):
+        self.assertEqual(AlertGate().margin, DEFAULT_HYSTERESIS_MARGIN)
+
+    def test_negative_margin_is_rejected(self):
+        with self.assertRaises(ValueError):
+            AlertGate(margin=-0.1)
+
+    def test_ongoing_banner_reports_the_rearm_level(self):
+        self.gate.decide([0.60], ["Lateral Movement"], threshold=0.50)
+        ongoing = self.gate.decide([0.55], ["Lateral Movement"], threshold=0.50)
+
+        self.assertEqual(ongoing.arm_level, 0.40)
+        self.assertEqual(ongoing.reasons_text, " ".join(ongoing.evaluation.reasons))
+        self.assertFalse(ongoing.reasons_text.startswith("ALERT"))
 
 
 if __name__ == "__main__":
