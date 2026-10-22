@@ -15,6 +15,9 @@ data/persisted_upload/
 
 # Streamlit secrets (if any)
 .streamlit/secrets.toml
+.env
+.env.*
+!.env.example
 
 # Environments
 env/
