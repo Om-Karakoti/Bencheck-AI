@@ -57,6 +57,5 @@ class TestCausalReplay(unittest.TestCase):
         self.assertEqual(result.escalation_alert["stage"], "Exfiltration")
         self.assertEqual(result.escalation_alert["arrival_seconds"], 30)
         exfil = result.arrival_df[result.arrival_df["Attack Stage"] == "Exfiltration"].iloc[0]
-        self.assertEqual(exfil["Predicted Arrival"], "+30s")
+        self.assertEqual(exfil["ETA"], "30 seconds")
         self.assertEqual(exfil["Confidence (%)"], 90.0)
-

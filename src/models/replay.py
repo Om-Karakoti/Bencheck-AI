@@ -35,20 +35,23 @@ def _history_at_step(features: np.ndarray, step: int, history_length: int) -> np
     return history
 
 
-def _arrival_rows(stage_probabilities, timestamps, threshold: float) -> List[Dict[str, Any]]:
+def _arrival_rows(dominant_stages, stage_probabilities, time_step_sec: float) -> List[Dict[str, Any]]:
+    """Return ETA only when a stage becomes the rollout's top-ranked stage."""
     rows = []
     for stage in ATTACK_STAGES:
         arrival = next(
             (
-                (timestamp, probabilities.get(stage, 0.0))
-                for timestamp, probabilities in zip(timestamps, stage_probabilities or [])
-                if probabilities.get(stage, 0.0) >= threshold
+                (step, probabilities.get(stage, 0.0))
+                for step, (top_stage, probabilities) in enumerate(
+                    zip(dominant_stages, stage_probabilities or []), start=1
+                )
+                if top_stage == stage
             ),
             None,
         )
         rows.append({
             "Attack Stage": stage,
-            "Predicted Arrival": "Not predicted" if arrival is None else f"+{int(arrival[0])}s",
+            "ETA": "beyond horizon" if arrival is None else f"{int(arrival[0] * time_step_sec)} seconds",
             "Confidence (%)": 0.0 if arrival is None else round(arrival[1] * 100, 1),
         })
     return rows
@@ -69,8 +72,10 @@ def replay_recent_windows(
 
     Every forecast at replay step *t* is built from windows available through
     *t* only. The arrival table is taken from the final (most recent) replay
-    point, while the alert is the first escalation found across the replay and
-    is deliberately emitted once.
+    point. For each non-benign stage, ETA is reported only when it first
+    becomes the rollout's top-ranked stage; otherwise its ETA is beyond
+    horizon. The alert is the first escalation found across the replay and is
+    deliberately emitted once.
     """
     if windowed.empty:
         return ReplayResult(pd.DataFrame(), pd.DataFrame(), None)
@@ -100,7 +105,7 @@ def replay_recent_windows(
             stage_mapper=stage_mapper,
         )
 
-        arrivals = _arrival_rows(forecast.stage_probabilities, [i * time_step_sec for i in forecast.step_indices], arrival_threshold)
+        arrivals = _arrival_rows(forecast.dominant_stages, forecast.stage_probabilities, time_step_sec)
         if replay_step == len(replay_window) - 1:
             final_arrival_rows = arrivals
 
