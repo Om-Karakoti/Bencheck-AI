@@ -186,3 +186,62 @@ class TestCausalReplay(unittest.TestCase):
 
         self.assertEqual(result.alert_log, [])
         self.assertIsNone(result.escalation_alert)
+
+
+class TestReplayAlertCausality(unittest.TestCase):
+    """Alerts already emitted for a window must not depend on rows after it.
+
+    The trailing windows carry the strongest escalation signal in the frame, and
+    the retained windows alternate between quiet and escalating states, so any
+    stage of replay that read past the current window would move the alerts,
+    their replay rows, or the state explained for them.
+    """
+
+    EARLY_GATES = [1.0, 0.0, 1.0, 0.0, 2.0, 0.0, 1.0, 2.0, 1.0, 0.0]
+    LOUD_FUTURE_GATES = [2.0] * 6
+    CUTOFF_SEC = 300.0  # window_end of the last retained EARLY window
+
+    def _replay(self, gates, explainer=None):
+        return replay_recent_windows(
+            _windowed_frame(gates), IdentityNormalizer(), GatedModel(), SwitchingMapper(),
+            history_length=2, forecast_steps=3, time_step_sec=30.0,
+            explainer=explainer, shap_samples=8,
+        )
+
+    def test_emitted_alerts_survive_removal_of_future_rows(self):
+        truncated = self._replay(self.EARLY_GATES)
+        with_future = self._replay(self.EARLY_GATES + self.LOUD_FUTURE_GATES)
+
+        # Guard against a vacuous pass: the retained span must really alert.
+        self.assertEqual(len(truncated.alert_log), 6)
+        self.assertGreater(len(with_future.alert_log), len(truncated.alert_log))
+
+        emitted_before_cutoff = [
+            entry for entry in with_future.alert_log if entry["replay_time_sec"] <= self.CUTOFF_SEC
+        ]
+        self.assertEqual(truncated.alert_log, emitted_before_cutoff)
+        self.assertEqual(truncated.escalation_alert, with_future.escalation_alert)
+
+    def test_replay_rows_for_retained_windows_are_unchanged(self):
+        truncated = self._replay(self.EARLY_GATES)
+        with_future = self._replay(self.EARLY_GATES + self.LOUD_FUTURE_GATES)
+
+        pd.testing.assert_frame_equal(
+            truncated.replay_df,
+            with_future.replay_df.head(len(truncated.replay_df)),
+        )
+
+    def test_each_alert_is_explained_from_its_own_window(self):
+        gates = self.EARLY_GATES + self.LOUD_FUTURE_GATES
+        frame = _windowed_frame(gates)
+        explainer = StubExplainer()
+
+        result = self._replay(gates, explainer=explainer)
+
+        self.assertEqual(len(result.alert_log), len(explainer.calls))
+        for entry, (state, _) in zip(result.alert_log, explainer.calls):
+            own_window = frame.loc[
+                frame["window_end"] == entry["replay_time_sec"], NETWORK_STATE_FEATURES
+            ].to_numpy(dtype=np.float32)
+            self.assertEqual(len(own_window), 1)
+            np.testing.assert_array_equal(state, own_window[0])

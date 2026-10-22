@@ -137,7 +137,7 @@ python run_server.py
 
 ## Automated Test Suite
 
-We maintain unit and integration tests across data windowing, model convergence, rollout stability, and API routes.
+We maintain unit and integration tests across data windowing, model convergence, rollout stability, alert causality, and API routes. Replay coverage includes a truncation test that removes every window after a cut-off and asserts the alerts already emitted for the retained windows are unchanged.
 
 Run the test suite with:
 
