@@ -486,6 +486,7 @@ from src.models.trainer import train_world_model
 from src.models.infiltration_scorer import derive_infiltration_score, InfiltrationAssessment
 from src.models.forecaster import rollout_and_score
 from src.models.replay import replay_recent_windows
+from src.models.alerting import evaluate_alert, SEVERE_STAGES
 from src.models.mitre_mapper import MITREStageMapper, CANONICAL_STAGES
 from src.models.explainability import InfiltrationSHAPExplainer
 
@@ -727,6 +728,39 @@ with st.sidebar:
         f"<div style='background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.25); border-radius:8px; padding:0.6rem 0.8rem; margin:0.8rem 0; font-family:JetBrains Mono,monospace; font-size:0.78rem;'>"
         f"<div style='color:rgba(255,255,255,0.5); text-transform:uppercase; font-size:0.68rem;'>CONFIGURED LOOKAHEAD</div>"
         f"<div style='color:#00e5ff; font-weight:700; font-size:1.05rem; margin-top:2px;'>+{forecast_steps}s ({k_steps} Steps)</div></div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "<div class='sidebar-heading' style='margin-top:1.2rem;'>"
+        "<span class='soc-heading-tag crimson'>ALERT</span>"
+        "<span>THRESHOLD</span>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+    alert_risk_pct = st.slider(
+        "Alert Risk Threshold (%)",
+        min_value=5,
+        max_value=100,
+        value=50,
+        step=5,
+        help=(
+            "Fires when any forecast step reaches this risk level, or when "
+            "Lateral Movement, Command & Control, or Exfiltration is predicted "
+            "inside the lookahead horizon."
+        ),
+    )
+    alert_threshold = alert_risk_pct / 100.0
+    severe_stage_chip = " &middot; ".join(
+        stage.upper().replace("&", "&amp;") for stage in SEVERE_STAGES
+    )
+
+    st.markdown(
+        "<div style='background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:0.6rem 0.8rem; margin:0.8rem 0; font-family:JetBrains Mono,monospace; font-size:0.78rem;'>"
+        "<div style='color:rgba(255,255,255,0.5); text-transform:uppercase; font-size:0.68rem;'>ARMED ALERTING</div>"
+        f"<div style='color:#ef4444; font-weight:700; font-size:1.05rem; margin-top:2px;'>&ge; {alert_risk_pct}% FORECAST RISK</div>"
+        f"<div style='color:rgba(255,255,255,0.45); font-size:0.66rem; margin-top:6px; line-height:1.5;'>"
+        f"ALWAYS-ON STAGES:<br/>{severe_stage_chip}</div></div>",
         unsafe_allow_html=True
     )
 
@@ -1164,6 +1198,9 @@ if df is not None and need_recompute:
             "replay_df": replay_result.replay_df,
             "arrival_df": replay_result.arrival_df,
             "escalation_alert": replay_result.escalation_alert,
+            "forecast_risk_scores": [float(score) for score in rollout.infiltration_scores],
+            "forecast_stages": [str(stage) for stage in rollout.dominant_stages],
+            "forecast_step_sec": float(config.window_size_sec),
         }
         st.session_state["analysis_cache"] = cached_result
         st.session_state["cached_k_steps"] = k_steps
@@ -1194,6 +1231,15 @@ replay_df = cache.get("replay_df", pd.DataFrame())
 arrival_df = cache.get("arrival_df", pd.DataFrame())
 escalation_alert = cache.get("escalation_alert")
 
+# Evaluated on cached rollout output so scrubbing the sidebar threshold never
+# forces a recompute of the forecasting pipeline.
+alert_eval = evaluate_alert(
+    forecast_scores=cache.get("forecast_risk_scores", []),
+    forecast_stages=cache.get("forecast_stages", []),
+    threshold=alert_threshold,
+    time_step_sec=cache.get("forecast_step_sec", 30.0),
+)
+
 # =========================================================================
 # SECTION 2: THREAT ASSESSMENT HUD [STEP 02] (MILITARY-GRADE SOC CARDS)
 # =========================================================================
@@ -1207,6 +1253,9 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
+if alert_eval.triggered:
+    st.error(alert_eval.message)
 
 h1, h2, h3, h4 = st.columns(4)
 
