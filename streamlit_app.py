@@ -1185,7 +1185,28 @@ if df is not None and need_recompute:
             forecast_steps=k_steps,
             time_step_sec=config.window_size_sec,
             max_replay_windows=20,
+            explainer=explainer,
+            shap_samples=25,
         )
+
+        alert_log_rows = []
+        for entry in replay_result.alert_log:
+            drivers = entry.get("drivers", [])
+            driver_cells = []
+            for driver in drivers[:2]:
+                label = FEATURE_LABELS.get(driver["feature"], driver["feature"].replace("_", " ").title())
+                driver_cells.append(f"{label} ({driver['impact']:+.4f})")
+            while len(driver_cells) < 2:
+                driver_cells.append("—")
+            alert_log_rows.append({
+                "Replay Time": f"{int(round(entry['replay_time_sec']))}s",
+                "Alerted Stage": entry["stage"],
+                "ETA": f"+{entry['eta_seconds']}s",
+                "Confidence (%)": entry["confidence_pct"],
+                "Top SHAP Driver 1": driver_cells[0],
+                "Top SHAP Driver 2": driver_cells[1],
+            })
+        alert_log_df = pd.DataFrame(alert_log_rows)
 
         cached_result = {
             "current_risk_score": current_risk_score,
@@ -1202,6 +1223,7 @@ if df is not None and need_recompute:
             "replay_df": replay_result.replay_df,
             "arrival_df": replay_result.arrival_df,
             "escalation_alert": replay_result.escalation_alert,
+            "alert_log_df": alert_log_df,
             "forecast_risk_scores": [float(score) for score in rollout.infiltration_scores],
             "forecast_stages": [str(stage) for stage in rollout.dominant_stages],
             "forecast_step_sec": float(config.window_size_sec),
@@ -1234,6 +1256,7 @@ timeline_df = cache["timeline_df"]
 replay_df = cache.get("replay_df", pd.DataFrame())
 arrival_df = cache.get("arrival_df", pd.DataFrame())
 escalation_alert = cache.get("escalation_alert")
+alert_log_df = cache.get("alert_log_df", pd.DataFrame())
 
 # Evaluated on cached rollout output so scrubbing the sidebar threshold never
 # forces a recompute of the forecasting pipeline. The gate lives in session state so
@@ -1477,7 +1500,7 @@ if escalation_alert:
     st.error(
         f"ESCALATION FORECAST: {escalation_alert['stage']} predicted in "
         f"+{escalation_alert['arrival_seconds']}s ({escalation_alert['confidence']:.1f}% confidence). "
-        "This is the single de-duplicated alert for the replay."
+        "One alert per escalation episode; the log below has the SHAP drivers."
     )
 else:
     st.success("No stage escalation met the forecast confidence threshold during the 20-window replay.")
@@ -1496,6 +1519,16 @@ with arrival_col:
     st.markdown("<div class='soc-heading'><span class='soc-heading-tag'>ARRIVAL</span><span>PREDICTED STAGE ARRIVAL</span></div>", unsafe_allow_html=True)
     if not arrival_df.empty:
         st.dataframe(arrival_df, use_container_width=True, hide_index=True)
+
+st.markdown(
+    "<div class='soc-heading'><span class='soc-heading-tag'>LOG</span><span>ALERT LOG</span>"
+    "<span class='soc-heading-sub'>ONE ENTRY PER ESCALATION EPISODE</span></div>",
+    unsafe_allow_html=True,
+)
+if not alert_log_df.empty:
+    st.dataframe(alert_log_df, use_container_width=True, hide_index=True)
+else:
+    st.caption("No alerts were raised during the replay, so the log is empty.")
 
 # =========================================================================
 # SECTION 4: BREAKDOWN & THREAT MATRIX [STEP 04]

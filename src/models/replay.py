@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 import numpy as np
@@ -24,6 +24,7 @@ class ReplayResult:
     replay_df: pd.DataFrame
     arrival_df: pd.DataFrame
     escalation_alert: Dict[str, Any] | None
+    alert_log: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def _history_at_step(features: np.ndarray, step: int, history_length: int) -> np.ndarray:
@@ -57,6 +58,24 @@ def _arrival_rows(dominant_stages, stage_probabilities, time_step_sec: float) ->
     return rows
 
 
+def _top_drivers(
+    explainer,
+    observed_state: np.ndarray,
+    n_samples: int,
+) -> List[Dict[str, Any]]:
+    """Return the two strongest risk-increasing SHAP drivers of an observed window.
+
+    Feature names stay raw so the console owns display labelling.
+    """
+    if explainer is None:
+        return []
+    explanation = explainer.explain_prediction(observed_state, n_samples=n_samples)
+    return [
+        {"feature": feature, "impact": round(float(phi), 4), "value": round(float(val), 2)}
+        for feature, phi, val in explanation.top_positive_features[:2]
+    ]
+
+
 def replay_recent_windows(
     windowed: pd.DataFrame,
     normalizer,
@@ -67,6 +86,8 @@ def replay_recent_windows(
     time_step_sec: float = 30.0,
     max_replay_windows: int = 20,
     arrival_threshold: float = 0.50,
+    explainer=None,
+    shap_samples: int = 25,
 ) -> ReplayResult:
     """Replay at most 20 observation windows without ever reading future states.
 
@@ -76,6 +97,11 @@ def replay_recent_windows(
     becomes the rollout's top-ranked stage; otherwise its ETA is beyond
     horizon. The alert is the first escalation found across the replay and is
     deliberately emitted once.
+
+    `alert_log` records one entry per escalation episode: a new entry is
+    appended only when the escalating stage differs from the one logged in the
+    previous window, and the latch clears once a window forecasts no
+    escalation, so the same stage returning later counts as a fresh alert.
     """
     if windowed.empty:
         return ReplayResult(pd.DataFrame(), pd.DataFrame(), None)
@@ -85,9 +111,11 @@ def replay_recent_windows(
     replay_window = ordered.iloc[start_index:].reset_index(drop=True)
     features = ordered[NETWORK_STATE_FEATURES].to_numpy(dtype=np.float32)
     replay_rows: List[Dict[str, Any]] = []
+    alert_log: List[Dict[str, Any]] = []
     escalation_alert = None
     final_arrival_rows: List[Dict[str, Any]] = []
     stage_rank = {stage: rank for rank, stage in enumerate(CANONICAL_STAGES)}
+    last_logged_stage = None
 
     for replay_step, step in enumerate(range(start_index, len(ordered))):
         history_raw = _history_at_step(features, step, history_length)
@@ -95,6 +123,7 @@ def replay_recent_windows(
         observed_state = history_raw[-1]
         observed_prediction = stage_mapper.predict_stage(observed_state)
         timestamp = float(ordered.loc[step, "window_end"])
+        observed_risk_pct = round(float(derive_infiltration_score(observed_state).infiltration_score * 100), 1)
         forecast = rollout_and_score(
             model=model,
             history_states=history_norm,
@@ -129,12 +158,31 @@ def replay_recent_windows(
                 "replay_window_end": timestamp,
             }
 
+        if escalation is None:
+            last_logged_stage = None
+        else:
+            future_step, future_stage, probabilities = escalation
+            if future_stage != last_logged_stage:
+                last_logged_stage = future_stage
+                alert_log.append({
+                    "replay_time_sec": timestamp,
+                    "stage": future_stage,
+                    "eta_seconds": int(future_step * time_step_sec),
+                    "confidence_pct": round(probabilities.get(future_stage, 0.0) * 100, 1),
+                    "drivers": _top_drivers(explainer, observed_state, shap_samples),
+                })
+
         replay_rows.append({
             "Window End": timestamp,
             "Observed Stage": observed_prediction.stage_label,
-            "Observed Risk (%)": round(float(derive_infiltration_score(observed_state).infiltration_score * 100), 1),
+            "Observed Risk (%)": observed_risk_pct,
             "Forecast Peak Risk (%)": round(float(np.max(forecast.infiltration_scores) * 100), 1),
             "Escalation Predicted": "YES" if escalation is not None else "NO",
         })
 
-    return ReplayResult(pd.DataFrame(replay_rows), pd.DataFrame(final_arrival_rows), escalation_alert)
+    return ReplayResult(
+        pd.DataFrame(replay_rows),
+        pd.DataFrame(final_arrival_rows),
+        escalation_alert,
+        alert_log,
+    )

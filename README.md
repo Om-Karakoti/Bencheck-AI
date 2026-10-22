@@ -127,7 +127,10 @@ python run_server.py
    - The banner reports the breach step as an ETA (e.g. `+90s`). Moving the slider re-evaluates the cached forecast, so it costs no extra inference.
    - **Alerts de-duplicate.** Each escalation announces once, keyed on the escalating stage. While that same stage persists the banner downgrades to an amber `ONGOING` notice instead of re-paging, so analyst interactions and forecast refreshes never stack duplicate alerts.
    - **Re-arming uses hysteresis.** Alerting re-arms only once forecast peak risk falls below the threshold by a 10-point margin (default 50% ⇒ re-arms under 40%) *and* no severe stage is still predicted. Requiring both stops a long-lived stage from re-firing every time risk wobbles through the band. Switching telemetry source resets the gate.
-5. **Threat Assessment HUD**:
+5. **Reading the Alert Log**:
+   - Under *Causal Replay & Escalation*, the alert log lists one row per escalation episode raised while replaying the last 20 windows, showing the replay time (`window_end`), the escalating stage, its ETA inside that forecast, the classifier confidence, and the two largest positive SHAP drivers of the observed window that triggered it.
+   - Rows de-duplicate the same way the banner does: a stage already logged in the previous window is not repeated, and a later appearance counts as a new episode only after an intervening window forecasts no escalation.
+6. **Threat Assessment HUD**:
    - Inspect overall infiltration risk, primary threat stage, active trajectory direction, and interactive SHAP driver breakdowns.
 
 ---
